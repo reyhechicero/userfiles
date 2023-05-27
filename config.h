@@ -1,8 +1,9 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const unsigned int borderpx  = 1;        /* border pixel of windows */
+static const unsigned int borderpx  = 0;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
+static const int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
 static const int showbar            = 0;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
 static const char *fonts[]          = { "monospace:size=10" };
@@ -11,7 +12,7 @@ static const char col_gray1[]       = "#222222";
 static const char col_gray2[]       = "#444444";
 static const char col_gray3[]       = "#bbbbbb";
 static const char col_gray4[]       = "#eeeeee";
-static const char col_cyan[]        = "#0000ee";
+static const char col_cyan[]        = "#005577";
 static const char *colors[][3]      = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
@@ -26,16 +27,18 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class      instance    title       tags mask     isfloating   isterminal noswallow monitor */
-	{ "Gimp",     NULL,       NULL,       0,            1,           0,         0,        -1 },
-	{ "Firefox",  NULL,       NULL,       1 << 8,       0,           0,         0,        -1 },
-	{ "st",       NULL,       NULL,       0,            0,           1,         1,        -1 },
+	/* class     instance  title           tags mask  isfloating  isterminal  noswallow  monitor */
+	{ "Gimp",    NULL,     NULL,           0,         1,          0,           0,        -1 },
+/*	{ "Firefox", NULL,     NULL,           1 << 8,    0,          0,          -1,        -1 },*/
+	{ "St",      NULL,     NULL,           0,         0,          1,           0,        -1 },
+	{ NULL,      NULL,     "Event Tester", 0,         0,          0,           1,        -1 }, /* xev */
 };
 
 /* layout(s) */
-static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
+static const float mfact     = 0.5; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 0;    /* 1 means respect size hints in tiled resizals */
+static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
@@ -46,6 +49,8 @@ static const Layout layouts[] = {
 
 /* key definitions */
 #define MODKEY Mod1Mask
+#define MEH Mod1Mask|ControlMask|ShiftMask
+#define HYPER Mod1Mask|Mod4Mask|ControlMask|ShiftMask
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
@@ -59,28 +64,50 @@ static const Layout layouts[] = {
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "st", NULL };
-static const char *browsercmd[]  = { "librewolf", NULL };
-/*static const char *passcmd[]  = { "passmenu", NULL };*/
-/*static const char *discordcmd[]  = { "discord", NULL };*/
+static const char *firefoxcmd[]  = { "firefox", NULL };
+static const char *librewolfcmd[]  = { "librewolf", NULL };
+static const char *sscmd[]  = { "scrshot", NULL };
+static const char *pamixervolumeupcmd[]  = { "pamixer","--allow-boost","-i","1", NULL };
+static const char *pamixervolumedowncmd[]  = { "pamixer","--allow-boost","-d","1", NULL };
+static const char *pamixer100cmd[]  = { "pamixer","--set-volume","100", NULL };
+static const char *mpcnextcmd[]  = { "mpc","next", NULL };
+static const char *mpcprevcmd[]  = { "mpc","prev", NULL };
+static const char *mpctogglecmd[]  = { "mpc","toggle", NULL };
+static const char *mpcvolumeupcmd[]  = { "mpc","volume","+1", NULL };
+static const char *mpcvolumedowncmd[]  = { "mpc","volume","-1", NULL };
+static const char *ncmpcppcmd[]  = { "st","-e","ncmpcpp", NULL };
+static const char *pulsemixercmd[]  = { "st","-e","pulsemixer", NULL };
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_y,      spawn,          {.v = dmenucmd } },
-	{ MODKEY,						XK_Return, spawn,          {.v = termcmd } },
-	{ MODKEY,						XK_t,      spawn,          {.v = browsercmd } },
+	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
+	{ MODKEY|ShiftMask,             XK_p,      spawn,          {.v = sscmd } },
+	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
+	{ MODKEY,                       XK_n,	   spawn,          {.v = ncmpcppcmd } },
+	{ MODKEY,                       XK_t, 	   spawn,          {.v = librewolfcmd } },
+	{ MODKEY|ShiftMask,             XK_t, 	   spawn,	   {.v = firefoxcmd } },
+	{ HYPER,			XK_h,      spawn,          {.v = mpcprevcmd } },
+	{ HYPER,			XK_l,      spawn,          {.v = mpcnextcmd } },
+	{ HYPER,			XK_p,      spawn,          {.v = mpctogglecmd } },
+	{ HYPER,			XK_0,      spawn,          {.v = mpcvolumeupcmd } },
+	{ HYPER,			XK_9,      spawn,          {.v = mpcvolumedowncmd} },
+	{ MEH,				XK_0,      spawn,          {.v = pamixervolumeupcmd} },
+	{ MEH,				XK_9,      spawn,          {.v = pamixervolumedowncmd} },
+	{ MEH,				XK_minus,  spawn,          {.v = pamixer100cmd} },
+	{ MEH,				XK_s,	   spawn,          {.v = pulsemixercmd} },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
-	{ MODKEY,                       XK_n,      focusstack,     {.i = +1 } },
-	{ MODKEY,                       XK_e,      focusstack,     {.i = -1 } },
-	{ MODKEY|ShiftMask,             XK_t,      incnmaster,     {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_g,      incnmaster,     {.i = -1 } },
-	{ MODKEY,                       XK_m,      setmfact,       {.f = -0.05} },
-	{ MODKEY,                       XK_i,      setmfact,       {.f = +0.05} },
+	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
+	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
+	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
+	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
+	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
+	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY|ShiftMask,             XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
-	{ MODKEY|ShiftMask,				XK_p,      killclient,     {0} },
+	{ MODKEY|ShiftMask,             XK_c,      killclient,     {0} },
 	{ MODKEY|ControlMask,           XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
-	{ MODKEY|ShiftMask,             XK_h,      setlayout,      {.v = &layouts[2]} },
+	{ MODKEY|ControlMask,           XK_f,      setlayout,      {.v = &layouts[1]} },
+	{ MODKEY|ControlMask,           XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
@@ -117,4 +144,3 @@ static Button buttons[] = {
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
 	{ ClkTagBar,            MODKEY,         Button3,        toggletag,      {0} },
 };
-
